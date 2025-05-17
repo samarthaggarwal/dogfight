@@ -1,4 +1,3 @@
-from typing import Optional
 from actor import Actor
 from scribe import Scribe
 
@@ -30,6 +29,8 @@ class Dogfight:
                 vote, reason = actor.vote_on_draft(problem, draft)
                 votes.append(vote)
                 reasons.append(reason)
+            print(f"Round {round_idx + 1} completed. Votes: {votes}")
+            print(f"Reasons: {reasons}")
             if self._fraction_of_agreements(votes) >= self.consensus_threshold:
                 break
             round_idx += 1
@@ -40,12 +41,12 @@ class Dogfight:
 
 if __name__ == '__main__':
     actors = {
-        "Security Engineer": "Seasoned security engineer focused on security and compliance.",
-        "Performance Engineer": "Seasoned performance engineer focused on performance and scalability.",
-        # "Cost Engineer": "Seasoned cost engineer focused on cost optimization.",
-        # "Data Engineer": "Seasoned data engineer focused on data management and analytics.",
+        "Security Engineer": "security, compliance.",
+        "Performance Engineer": "performance, scalability.",
+        "ML Engineer": "machine learning, algorithms.",
+        "Data Engineer": "data management, analytics.",
     }
-    dogfight = Dogfight(actors, max_rounds=1, consensus_threshold=0.4)
+    dogfight = Dogfight(actors, max_rounds=3, consensus_threshold=0.67)
     problem = "We want to build metrics logger to collect performance metrics from all our customers. Each customer has their own cloud project. Should we host the metrics logger in a central project or per customer?"
-    result = dogfight.debate(problem)
-    print(result)
+    proposal = dogfight.debate(problem)
+    print(proposal)
