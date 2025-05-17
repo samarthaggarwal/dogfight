@@ -29,8 +29,9 @@ class Dogfight:
                 vote, reason = actor.vote_on_draft(problem, draft)
                 votes.append(vote)
                 reasons.append(reason)
-            print(f"Round {round_idx + 1} completed. Votes: {votes}")
-            print(f"Reasons: {reasons}")
+            print(f"Round {round_idx + 1} complete.")
+            for i in range(len(self.actors)):
+                print(f"### {self.actors[i].name}:\nVote: {votes[i]}\nReason: {reasons[i]}\n\n")
             if self._fraction_of_agreements(votes) >= self.consensus_threshold:
                 break
             round_idx += 1
