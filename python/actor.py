@@ -1,9 +1,9 @@
-from typing import Tuple, List, Optional
+import re
+from typing import Tuple, Optional
 from llm.anthropic_client import AnthropicClient
 
 
-GENERAL_TRAITS = """
-General Traits:
+ACTOR_TRAITS = """
 - seasoned expert with deep knowledge of the subject matter
 - opinionated and prefers proven technologies
 - not gullible but open to changing their mind when presented with a better alternative
@@ -15,33 +15,58 @@ General Traits:
 MAX_TOKENS = 1000
 
 
+VOTE_PROMPT_TEMPLATE_STR = """
+You are {name_param}, a seasoned expert in {expertise_param} with the following traits:
+{actor_traits_param}
+
+You are asked to review and vote on a proposal to solve a problem. Your goal is to help refine it towards an optimal solution.
+
+<problem_statement>
+{problem_param}
+</problem_statement>
+
+<draft_proposal>
+{draft_proposal_param}
+</draft_proposal>
+
+Output your binary vote and a concise reason for it in the following format. Do NOT include any additional text.
+If you disagree, explain why and suggest specific improvements or which alternative you'd prefer.
+<vote>
+{{your vote - AGREE or DISAGREE}}
+</vote>
+<reason>
+{{your reason - concise and focused}}
+</reason>
+"""
+
 class Actor:
-    def __init__(self, name: str, personality: str):
+    def __init__(self, name: str, expertise: str):
         """
         Args:
-            name: The name of the actor (e.g., 'InfraExpert_1').
-            personality: A description of the actor's persona and expertise 
+            name: The name of the actor (e.g., 'Infra Engineer').
+            expertise: A description of the actor's persona and expertise
                          (e.g., 'Seasoned infrastructure engineer focused on scalability and cost-efficiency. Opinionated and prefers proven technologies.')
         """
         self.name = name
-        self.personality = personality
+        self.expertise = expertise
         self.llm_client = AnthropicClient()
         self.current_proposal: Optional[str] = None
 
-    def generate_proposal(self, problem_statement: str) -> str:
+    def generate_proposal(self, problem: str, draft: Optional[str] = None) -> str:
         """
-        Generates an initial proposal for the given problem statement based on the actor's personality.
+        Generates an initial proposal for the given problem statement based on the actor's expertise.
 
         Args:
-            problem_statement: The problem to generate a proposal for.
+            problem: The problem to generate a proposal for.
+            draft: An optional draft proposal that the actor should consider.
 
         Returns:
             A string containing the actor's proposal.
         """
         prompt = (
-            f"You are {self.name}, a {self.personality} with the following traits: {GENERAL_TRAITS}.\n"
-            f"Given the following problem statement, please generate a detailed and specific proposal to address it. Consider your unique perspective and expertise.\n"
-            f"Problem Statement: {problem_statement}\n\n"
+            f"You are {self.name}, a seasoned expert in {self.expertise} with the following traits:\n{ACTOR_TRAITS}\n\n"
+            f"Given the following problem statement. Think carefully about it and generate a detailed and specific proposal to address it. Consider your unique perspective and expertise.\n"
+            f"Problem Statement: {problem}\n\n"
             f"Your Proposal:"
         )
         
@@ -52,70 +77,62 @@ class Actor:
 
     def vote_on_draft(
         self, 
+        problem: str,
         draft_proposal: str,
-        alternatives: Optional[List[str]] = None
     ) -> Tuple[bool, str]:
         """
-        Reviews a draft proposal (and any alternatives) and casts a vote (agree/disagree) with a rationale.
+        Reviews a draft proposal and casts a vote (agree/disagree) with a reason.
 
         Args:
+            problem: The problem statement.
             draft_proposal: The consolidated draft proposal from the Scribe.
-            alternatives: Optional list of alternative solutions or points of view highlighted by the Scribe.
 
         Returns:
             A tuple containing:
                 - bool: True if the actor agrees with the draft, False otherwise.
-                - str: A rationale for the vote, especially important for disagreements.
+                - str: A reason for the vote, especially important for disagreements.
         """
-        prompt_parts = [
-            f"You are {self.name}, a {self.personality}.\n"
-            f"You are asked to review and vote on the following draft proposal. Your goal is to help refine it towards an optimal solution.\n"
-            f"Draft Proposal:\n{draft_proposal}\n"
-        ]
-
-        if alternatives:
-            prompt_parts.append("The Scribe also noted the following alternatives or points of contention:")
-            for i, alt in enumerate(alternatives):
-                prompt_parts.append(f"  Alternative {i+1}: {alt}")
-            prompt_parts.append("\n")
-
-        prompt_parts.extend([
-            f"Based on your expertise and previous input (if any), do you agree with this draft proposal? "
-            f"Provide a clear 'AGREE' or 'DISAGREE' vote, followed by a concise rationale. "
-            f"If you disagree, explain why and suggest specific improvements or which alternative you'd prefer."
-            f"\nYour Vote and Rationale: [AGREE/DISAGREE] Rationale: ..."
-        ])
-
-        prompt = "\n".join(prompt_parts)
-        
+        prompt = VOTE_PROMPT_TEMPLATE_STR.format(
+            name_param=self.name,
+            expertise_param=self.expertise,
+            actor_traits_param=ACTOR_TRAITS,
+            problem_param=problem,
+            draft_proposal_param=draft_proposal
+        )
         response = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
+        vote_decision, reason = self.parse_vote(response)
 
-        # Basic parsing of the vote and rationale (can be made more robust)
-        vote_decision = False
-        rationale = response
-        if response.upper().startswith("AGREE"):
-            vote_decision = True
-            rationale = response[len("AGREE"):].lstrip(" :Rrationale").lstrip()
-        elif response.upper().startswith("DISAGREE"):
-            vote_decision = False
-            rationale = response[len("DISAGREE"):].lstrip(" :Rrationale").lstrip()
-        else:
-            # If parsing fails, assume disagreement and use full response as rationale
-            print(f"Warning: Could not parse vote from Actor {self.name}. Defaulting to DISAGREE. Response: {response}")
-            vote_decision = False
+        print(f"Actor {self.name} voted: {'Agree' if vote_decision else 'Disagree'}. reason: {reason}...")
+        return vote_decision, reason
 
-        print(f"Actor {self.name} voted: {'Agree' if vote_decision else 'Disagree'}. Rationale: {rationale[:100]}...")
-        return vote_decision, rationale
+    def parse_vote(self, response_text: str) -> Tuple[bool, str]:
+        try:
+            vote_match = re.search(r"<vote>\s*(AGREE|DISAGREE)\s*</vote>", response_text, re.IGNORECASE)
+            reason_match = re.search(r"<reason>\s*(.*?)\s*</reason>", response_text, re.DOTALL | re.IGNORECASE)
+
+            if vote_match and reason_match:
+                vote_str = vote_match.group(1).upper()
+                reason_str = reason_match.group(1).strip()
+                
+                vote_decision = (vote_str == "AGREE")
+                return vote_decision, reason_str
+            else:
+                print(f"Warning: Could not parse vote or reason tags from Actor {self.name}. Defaulting to DISAGREE. Response: {response_text}")
+                return False, response_text
+        except Exception as e:
+            print(f"Error during parsing vote for Actor {self.name}: {e}. Defaulting to DISAGREE. Response: {response_text}")
+            return False, response_text
 
     def __repr__(self):
-        return f"Actor(name='{self.name}', personality='{self.personality}')"
+        return f"Actor(name='{self.name}', expertise='{self.expertise}')"
 
 
 if __name__ == '__main__':
     security_eng = Actor("Security Engineer", "Seasoned security engineer focused on security and compliance. Opinionated and prefers proven technologies.")
     print(security_eng)
-    proposal = security_eng.generate_proposal("We want to build a memory storage system across all MCPs. Each MCP is a separate cloud project. Should we host the memory in a central project or per MCP?")
+    problem = "We want to build metrics logger to collect performance metrics from all our customers. Each customer has their own cloud project. Should we host the metrics logger in a central project or per customer?"
+    proposal = security_eng.generate_proposal(problem)
     print(proposal)
-    vote, rationale = security_eng.vote_on_draft(proposal)
+    vote, reason = security_eng.vote_on_draft(problem, proposal)
     print(vote)
-    print(rationale)
+    print(reason)
