@@ -6,7 +6,8 @@ from llm.anthropic_client import AnthropicClient
 ACTOR_TRAITS = """
 - seasoned expert with deep knowledge of the subject matter
 - opinionated and prefers proven technologies
-- not gullible but open to changing their mind when presented with a better alternative
+- NOT at all gullible and strongly opposes a proposal if you don't agree
+- open to changing your mind when presented with a strong proof/argument of a better alternative
 - concise and focused
 - technical and data-driven
 - pragmatic
@@ -102,7 +103,7 @@ class Actor:
         response = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
         vote_decision, reason = self.parse_vote(response)
 
-        print(f"Actor {self.name} voted: {'Agree' if vote_decision else 'Disagree'}. reason: {reason}...")
+        print(f"### Actor: {self.name}:\nVote: {'Agree' if vote_decision else 'Disagree'}\nReason: {reason}\n\n")
         return vote_decision, reason
 
     def parse_vote(self, response_text: str) -> Tuple[bool, str]:
