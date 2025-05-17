@@ -41,7 +41,7 @@ If you disagree, explain why and suggest specific improvements or which alternat
 """
 
 class Actor:
-    def __init__(self, name: str, expertise: str):
+    def __init__(self, name: str, expertise: str, debug_mode: bool = False):
         """
         Args:
             name: The name of the actor (e.g., 'Infra Engineer').
@@ -52,6 +52,7 @@ class Actor:
         self.expertise = expertise
         self.llm_client = AnthropicClient()
         self.current_proposal: Optional[str] = None
+        self.debug_mode = debug_mode
 
     def generate_proposal(self, problem: str, draft: Optional[str] = None) -> str:
         """
@@ -73,7 +74,8 @@ class Actor:
 
         proposal = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
         self.current_proposal = proposal
-        print(f"Actor {self.name} generated proposal.")
+        if self.debug_mode:
+            print(f"Actor {self.name} generated proposal.")
         return proposal
 
     def vote_on_draft(
@@ -103,7 +105,8 @@ class Actor:
         response = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
         vote_decision, reason = self.parse_vote(response)
 
-        print(f"### Actor: {self.name}:\nVote: {'Agree' if vote_decision else 'Disagree'}\nReason: {reason}\n\n")
+        if self.debug_mode:
+            print(f"### Actor: {self.name}:\nVote: {'Agree' if vote_decision else 'Disagree'}\nReason: {reason}\n\n")
         return vote_decision, reason
 
     def parse_vote(self, response_text: str) -> Tuple[bool, str]:
@@ -118,10 +121,12 @@ class Actor:
                 vote_decision = (vote_str == "AGREE")
                 return vote_decision, reason_str
             else:
-                print(f"Warning: Could not parse vote or reason tags from Actor {self.name}. Defaulting to DISAGREE. Response: {response_text}")
+                if self.debug_mode:
+                    print(f"Warning: Could not parse vote or reason tags from Actor {self.name}. Defaulting to DISAGREE. Response: {response_text}")
                 return False, response_text
         except Exception as e:
-            print(f"Error during parsing vote for Actor {self.name}: {e}. Defaulting to DISAGREE. Response: {response_text}")
+            if self.debug_mode:
+                print(f"Error during parsing vote for Actor {self.name}: {e}. Defaulting to DISAGREE. Response: {response_text}")
             return False, response_text
 
     def __repr__(self):
@@ -129,7 +134,7 @@ class Actor:
 
 
 if __name__ == '__main__':
-    security_eng = Actor("Security Engineer", "Seasoned security engineer focused on security and compliance. Opinionated and prefers proven technologies.")
+    security_eng = Actor("Security Engineer", "security and compliance", debug_mode=True)
     print(security_eng)
     problem = "We want to build metrics logger to collect performance metrics from all our customers. Each customer has their own cloud project. Should we host the metrics logger in a central project or per customer?"
     proposal = security_eng.generate_proposal(problem)

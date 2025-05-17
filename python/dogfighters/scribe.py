@@ -26,21 +26,23 @@ Your Draft Proposal:
 
 
 class Scribe:
-    def __init__(self):
+    def __init__(self, debug_mode: bool = False):
         self.llm_client: LLMClient = AnthropicClient()
         self.draft: str = ""
+        self.debug_mode = debug_mode
     
     def generate_draft(self, problem: str, proposals: list[str]) -> str:
         proposals_str = '\n###\n'.join(proposals)
         prompt = SCRIBE_PROMPT_TEMPLATE.format(problem=problem, proposals_str=proposals_str)
         draft = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
         self.draft = draft
-        print(f"Scribe generated draft proposal.")
+        if self.debug_mode:
+            print(f"Scribe generated draft proposal.")
         return draft
 
 
 if __name__ == '__main__':
-    scribe = Scribe()
+    scribe = Scribe(debug_mode=True)
     problem = "We want to build a memory storage system across all MCPs. Each MCP is a separate cloud project. Should we host the memory in a central project or per MCP?"
     proposals = [
         "We should host the memory in a central project.",
