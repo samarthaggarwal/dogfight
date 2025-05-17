@@ -1,5 +1,5 @@
-from actor import Actor
-from scribe import Scribe
+from dogfighters.actor import Actor
+from dogfighters.scribe import Scribe
 
 
 class Dogfight:
