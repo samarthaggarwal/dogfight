@@ -69,7 +69,7 @@ class Actor:
             f"Problem Statement: {problem}\n\n"
             f"Your Proposal:"
         )
-        
+
         proposal = self.llm_client.generate_text(prompt, max_tokens=MAX_TOKENS)
         self.current_proposal = proposal
         print(f"Actor {self.name} generated proposal.")
