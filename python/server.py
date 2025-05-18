@@ -21,10 +21,13 @@ async def debate_alternatives(problem: str, max_rounds: int = 3) -> str:
     Runs a dogfight to generate a solution for the given problem.
     """
     actors = {
-        "Security Engineer": "security, compliance.",
-        "Performance Engineer": "performance, scalability.",
-        "ML Engineer": "machine learning, algorithms.",
-        "Data Engineer": "data management, analytics.",
+        "Security Engineer": "security, compliance",
+        "Performance Engineer": "performance, scalability",
+        "ML Engineer": "machine learning, algorithms",
+        "Data Engineer": "data management, analytics",
+        "Product Manager": "product strategy, go-to-market",
+        "Competitive Analyst": "competitive landscape, market analysis",
+        "Sales Director": "sales strategy, customer acquisition",
     }
     dogfight = Dogfight(actors, max_rounds=max_rounds, consensus_threshold=0.8)
     proposal = dogfight.debate(problem)

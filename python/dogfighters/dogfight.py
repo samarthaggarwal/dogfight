@@ -64,12 +64,15 @@ class Dogfight:
 
 if __name__ == '__main__':
     actors = {
-        "Security Engineer": "security, compliance.",
-        "Performance Engineer": "performance, scalability.",
-        "ML Engineer": "machine learning, algorithms.",
-        "Data Engineer": "data management, analytics.",
+        "Security Engineer": "security, compliance",
+        "Performance Engineer": "performance, scalability",
+        "ML Engineer": "machine learning, algorithms",
+        "Data Engineer": "data management, analytics",
+        "Product Manager": "product strategy, go-to-market",
+        "Competitive Analyst": "competitive landscape, market analysis",
+        "Sales Director": "sales strategy, customer acquisition",
     }
-    dogfight = Dogfight(actors, max_rounds=3, consensus_threshold=0.67, debug_mode=False)
+    dogfight = Dogfight(actors, max_rounds=3, consensus_threshold=0.67, debug_mode=True)
     problem = "We want to build metrics logger to collect performance metrics from all our customers. Each customer has their own cloud project. Should we host the metrics logger in a central project or per customer?"
     proposal = dogfight.debate(problem)
     print(proposal)
