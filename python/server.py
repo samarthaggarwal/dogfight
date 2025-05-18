@@ -16,7 +16,7 @@ async def hello_world(name: str = "World") -> str:
     return f"Hello, {name}! This is the Dogfight MCP server."
 
 @mcp.tool()
-async def debate(problem: str, max_rounds: int = 3) -> str:
+async def debate_alternatives(problem: str, max_rounds: int = 3) -> str:
     """
     Runs a dogfight to generate a solution for the given problem.
     """
